@@ -13,53 +13,53 @@
 # Released under the same terms as Sensu (the MIT license); see LICENSE
 # for details.
 
-require 'rubygems' if RUBY_VERSION < '1.9.0'
-require 'sensu-plugin/check/cli'
+require "rubygems" if RUBY_VERSION < "1.9.0"
+require "sensu-plugin/check/cli"
 
 def silent_require(buggy_gem)
   dup_stderr = STDERR.dup
-  STDERR.reopen('/dev/null')
+  STDERR.reopen("/dev/null")
   unless require(buggy_gem)
-    echo 'haproxy gem not installed'
+    echo "haproxy gem not installed"
     exit 1
   end
   STDERR.reopen(dup_stderr)
 end
 
-silent_require 'haproxy'
+silent_require "haproxy"
 
 class CheckHAProxy < Sensu::Plugin::Check::CLI
 
   option :warn_percent,
-    :short => '-w PERCENT',
+    :short => "-w PERCENT",
     :boolean => true,
     :default => 50,
     :proc => proc {|a| a.to_i },
     :description => "Warning Percent, default: 50"
 
   option :crit_percent,
-    :short => '-c PERCENT',
+    :short => "-c PERCENT",
     :boolean => true,
     :default => 25,
     :proc => proc {|a| a.to_i },
     :description => "Critical Percent, default: 25"
 
   option :all_services,
-    :short => '-A',
+    :short => "-A",
     :boolean => true,
     :description => "Check ALL Services, flag enables"
 
   option :missing_ok,
-    :short => '-m',
+    :short => "-m",
     :boolean => true,
     :description => "Missing OK, flag enables"
 
   option :service,
-    :short => '-s SVC',
+    :short => "-s SVC",
     :description => "Service Name to Check"
 
   option :socket,
-    :short => '-S SOCKET',
+    :short => "-S SOCKET",
     :default => "/var/run/haproxy.sock",
     :description => "Path to HAProxy Socket, default: /var/run/haproxy.sock"
 
@@ -67,7 +67,7 @@ class CheckHAProxy < Sensu::Plugin::Check::CLI
     if config[:service] or config[:all_services]
       services = get_services
     else
-      unknown 'No service specified'
+      unknown "No service specified"
     end
 
     if services.empty?
@@ -78,8 +78,8 @@ class CheckHAProxy < Sensu::Plugin::Check::CLI
         warning
       end
     else
-      percent_up = 100 * services.select {|svc| svc[:status] == 'UP' }.size / services.size
-      failed_names = services.reject {|svc| svc[:status] == 'UP' }.map {|svc| svc[:svname] }
+      percent_up = 100 * services.select {|svc| svc[:status] == "UP" }.size / services.size
+      failed_names = services.reject {|svc| svc[:status] == "UP" }.map {|svc| svc[:svname] }
       services_down = failed_names.empty? ? "" : ", DOWN: #{failed_names.join(', ')}"
       message "UP: #{percent_up}% of #{services.size} /#{config[:service]}/ services" + services_down
       if percent_up < config[:crit_percent]
