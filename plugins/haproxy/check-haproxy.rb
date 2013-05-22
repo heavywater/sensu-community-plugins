@@ -19,7 +19,10 @@ require 'sensu-plugin/check/cli'
 def silent_require(buggy_gem)
   dup_stderr = STDERR.dup
   STDERR.reopen('/dev/null')
-  require buggy_gem
+  unless require(buggy_gem)
+    echo 'haproxy gem not installed'
+    exit 1
+  end
   STDERR.reopen(dup_stderr)
 end
 
@@ -33,23 +36,28 @@ class CheckHAProxy < Sensu::Plugin::Check::CLI
     :default => 50,
     :proc => proc {|a| a.to_i },
     :description => "Warning Percent, default: 50"
+
   option :crit_percent,
     :short => '-c PERCENT',
     :boolean => true,
     :default => 25,
     :proc => proc {|a| a.to_i },
     :description => "Critical Percent, default: 25"
+
   option :all_services,
     :short => '-A',
     :boolean => true,
     :description => "Check ALL Services, flag enables"
+
   option :missing_ok,
     :short => '-m',
     :boolean => true,
     :description => "Missing OK, flag enables"
+
   option :service,
     :short => '-s SVC',
     :description => "Service Name to Check"
+
   option :socket,
     :short => '-S SOCKET',
     :default => "/var/run/haproxy.sock",
@@ -72,7 +80,8 @@ class CheckHAProxy < Sensu::Plugin::Check::CLI
     else
       percent_up = 100 * services.select {|svc| svc[:status] == 'UP' }.size / services.size
       failed_names = services.reject {|svc| svc[:status] == 'UP' }.map {|svc| svc[:svname] }
-      message "UP: #{percent_up}% of #{services.size} /#{config[:service]}/ services" + (failed_names.empty? ? "" : ", DOWN: #{failed_names.join(', ')}")
+      services_down = failed_names.empty? ? "" : ", DOWN: #{failed_names.join(', ')}"
+      message "UP: #{percent_up}% of #{services.size} /#{config[:service]}/ services" + services_down
       if percent_up < config[:crit_percent]
         critical
       elsif percent_up < config[:warn_percent]
